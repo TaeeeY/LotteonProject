@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.lotteon.mapper.ProductMapper">
+
+
+    <!--product_list-->
+    <select id="selectProductsForNew" resultType="kr.co.lotteon.dto.ProductDTO">
+        SELECT a.*, b.mainImg
+        FROM `product` AS a
+        LEFT JOIN `productimg` AS b ON a.pno = b.pno
+        WHERE b.mainImg IS NOT NULL
+        ORDER BY a.rdate DESC, a.pno ASC
+        LIMIT 8
+    </select>
+
+    <!-- 장바구니 상품 정보 조회 -->
+    <select id="selectCartWithProductsByUid" resultType="kr.co.lotteon.dto.ProductDTO">
+        SELECT a.pno, a.pname, a.company, a.price, a.cate, a.info, a.discount, a.point, a.deliprice, b.mainImg, c.pcount, c.options
+        FROM `cart` AS c
+        JOIN `product` AS a ON c.pno = a.pno
+        LEFT JOIN `productimg` AS b ON a.pno = b.pno
+        WHERE c.uid = #{uid}
+        ORDER BY c.cno DESC
+    </select>
+
+    <!-- 상품 상세 정보 조회 -->
+    <select id="selectProductWithImagesById" resultType="kr.co.lotteon.dto.ProductDTO">
+        SELECT p.*, img.mainimg, img.subimg, img.detailimg
+        FROM product p
+        LEFT JOIN productimg img ON p.pno = img.pno
+        WHERE p.pno = #{pno}
+    </select>
+
+    <!-- 상품 검색 -->
+    <select id="searchProducts" resultType="kr.co.lotteon.dto.ProductDTO">
+        SELECT p.*, img.mainImg, img.subImg, img.detailImg
+        FROM product p
+        LEFT JOIN productimg img ON p.pno = img.pno
+        WHERE 1=1
+        <if test="search != null and search != ''">
+            AND p.pname LIKE CONCAT('%', #{search}, '%')
+        </if>
+        <if test="minPrice != null">
+            AND p.price >= #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND p.price &lt;= #{maxPrice}
+        </if>
+        <if test="category != null and category != ''">
+            AND p.cate = #{category}
+        </if>
+        ORDER BY p.rdate DESC
+    </select>
+
+    <!-- 상품 검색 갯수 -->
+    <select id="countSearchProducts" resultType="int">
+        SELECT COUNT(*)
+        FROM product p
+        LEFT JOIN productimg img ON p.pno = img.pno
+        WHERE 1=1
+        <if test="search != null and search != ''">
+            AND p.pname LIKE CONCAT('%', #{search}, '%')
+        </if>
+        <if test="minPrice != null">
+            AND p.price >= #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND p.price &lt;= #{maxPrice}
+        </if>
+        <if test="category != null and category != ''">
+            AND p.cate = #{category}
+        </if>
+    </select>
+
+
+</mapper>
