@@ -1,21 +1,14 @@
 package kr.co.lotteon.service;
 
 import com.querydsl.core.Tuple;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 import kr.co.lotteon.dto.*;
 import kr.co.lotteon.entity.*;
 
-import kr.co.lotteon.mapper.AdminMapper;
-
 import kr.co.lotteon.mapper.ProductMapper;
 import kr.co.lotteon.repository.*;
-import kr.co.lotteon.repository.custom.ProductRepositoryCustom;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.internal.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.*;
 
 import lombok.RequiredArgsConstructor;
@@ -43,16 +35,12 @@ public class ProductService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
-    private final OrderDetailRepository orderDetailRepository;
-    private final CartRepository cartRepository;
-    private final OrderRepository orderRepository;
 
     @Value("${img.upload.path}")
     private String imgUploadPath;
 
     private final ModelMapper modelMapper;
     private final ProductMapper productMapper;
-    private final AdminMapper adminMapper;
 
 
     private final ProductimgRepository productimgRepository;
@@ -122,6 +110,9 @@ public class ProductService {
         return product;
     }
 
+
+
+
     public Product insertProduct(ProductDTO productDTO) {
 
         Product product = modelMapper.map(productDTO, Product.class);
@@ -134,10 +125,25 @@ public class ProductService {
         상품 조회
      */
 
-    public List<ProductDTO> findNewProduct(){
-        return productMapper.selectProductsForNew();
+    public List<ProductDTO> findNewestProduct(){
+        return productMapper.selectProductsByNewest();
     }
 
+    public List<ProductDTO> findBestProduct(){
+        return productMapper.selectProductsByOrder();
+    }
+
+    public List<ProductDTO> findRecommendProduct(){
+        return productMapper.selectProductsByScore();
+    }
+
+    public List<ProductDTO> findHighHitProduct(){
+        return productMapper.selectProductsByHit();
+    }
+
+    public List<ProductDTO> findDiscountProduct(){
+        return productMapper.selectProductsByDiscount();
+    }
 
     public Page<Product> findAllProducts(Pageable pageable) {
         return productRepository.findAll(pageable);
@@ -209,6 +215,7 @@ public class ProductService {
         return productRepository.findByCate(category.getCate(), pageable);
     }
 
+    @Cacheable("cateCache")
     @Transactional(rollbackFor = Exception.class)
     public List<CategoryDTO> getCategoryList() {
         List<CategoryDTO> results = categoryRepository.findAll().stream().map(CategoryDTO::of).collect(Collectors.toList());
@@ -221,57 +228,66 @@ public class ProductService {
         return productMapper.selectCartWithProductsByUid(uid);
     }
 
-    // ProductService.java
-    public ProductPageResponseDTO getList(ProductPageRequestDTO productpageRequestDTO, String cate) {
-        if (productpageRequestDTO == null) {
-            log.error("PageRequestDTO is null");
-            throw new IllegalArgumentException("PageRequestDTO must not be null");
-        }
 
+    // ProductService.java
+    public ProductPageResponseDTO getList(ProductPageRequestDTO productPageRequestDTO, int cate) {
         Pageable pageable = PageRequest.of(
-                Math.max(productpageRequestDTO.getPg() - 1, 0),
-                productpageRequestDTO.getSize(),
+                Math.max(productPageRequestDTO.getPg() - 1, 0), 12,
                 Sort.by("pname").ascending()
         );
 
-        Page<Product> page;
-        try {
-            if (cate != null && !cate.trim().isEmpty()) {
-                int code = Integer.parseInt(cate);
-                int depth = (code % 10 != 0) ? 1 : (code % 1000 != 0) ? 100 : 10000;
-                page = productRepository.findByCateBetween(pageable, code, code + depth - 1);
-            } else {
-                page = productRepository.findAll(pageable);
-            }
-        } catch (NumberFormatException e) {
-            log.error("Invalid category format: " + cate, e);
-            return ProductPageResponseDTO.builder()
-                    .dtoList(Collections.emptyList())
-                    .total(0)
-                    .build();
+        Specification<Product> specification = Specification.where((root, query, criteriaBuilder) -> criteriaBuilder.conjunction());
+
+        // 카테고리 필터링
+        if (cate > 0) {
+            int depth = (cate % 10 != 0) ? 1 : (cate % 1000 != 0) ? 100 : 10000;
+            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.between(root.get("cate"), cate, cate + depth - 1));
         }
-        for(Product p : page){
-            log.info("asdjfklasjdk" + p);
+
+        // 검색 조건 필터링
+        if (productPageRequestDTO.getSearch() != null && !productPageRequestDTO.getSearch().isEmpty()) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.like(root.get("pname"), "%" + productPageRequestDTO.getSearch() + "%")
+            );
         }
+
+        if (productPageRequestDTO.getMinPrice() != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("price"), productPageRequestDTO.getMinPrice())
+            );
+        }
+
+        if (productPageRequestDTO.getMaxPrice() != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.lessThanOrEqualTo(root.get("price"), productPageRequestDTO.getMaxPrice())
+            );
+        }
+
+        Page<Product> page = productRepository.findAll(specification, pageable);
+
         List<ProductDTO> productDTOs = page.getContent().stream()
                 .map(product -> {
-                    ProductDTO dto = entityToDTO(product);
-                    productimgRepository.findById(product.getPno()).ifPresent(img -> {
+                    ProductDTO dto = convertToProductDTO(product);
+                    // 이미지를 포함하도록 추가
+                    Productimg img = product.getProductimg();
+                    if (img != null) {
                         dto.setMainimg(img.getMainimg());
                         dto.setSubimg(img.getSubimg());
                         dto.setDetailimg(img.getDetailimg());
-                    });
+                    }
                     return dto;
                 })
                 .collect(Collectors.toList());
 
         return ProductPageResponseDTO.builder()
                 .dtoList(productDTOs)
-                .pg(productpageRequestDTO.getPg())
+                .productPageRequestDTO(productPageRequestDTO)
+                .pg(productPageRequestDTO.getPg())
                 .size(page.getSize())
                 .total((int) page.getTotalElements())
                 .build();
     }
+
 
     private ProductDTO entityToDTO(Product product) {
         return ProductDTO.builder()
@@ -286,9 +302,6 @@ public class ProductService {
                 .discount(product.getDiscount()) // 할인율 추가
                 .point(product.getPoint())
                 .info(product.getInfo())
-                .delprice(product.getDelprice())
-                .size(product.getSize())
-                .color(product.getColor())
                 .hit(product.getHit())
                 .opname(product.getOpname())
                 .opvalue(product.getOpvalue())
@@ -304,6 +317,11 @@ public class ProductService {
         return productMapper.selectProductWithImagesById(pno);
     }
 
+    public void productHitUpdate(ProductDTO productDTO){
+        productDTO.setHit(productDTO.getHit() + 1);
+        Product product = modelMapper.map(productDTO,Product.class);
+        productRepository.save(product);
+    }
 
 
     //🎈 상품 조회
@@ -343,12 +361,12 @@ public class ProductService {
     }
 
     // 상품 검색 서비스 메서드
-    public List<ProductDTO> searchProducts(String search, Integer minPrice, Integer maxPrice, String category) {
-        return productMapper.searchProducts(search, minPrice, maxPrice, category);
+    public List<ProductDTO> searchProducts(String search, Integer minPrice, Integer maxPrice, int cate) {
+        return productMapper.searchProducts(search, minPrice, maxPrice, cate);
     }
 
-    public int countSearchProducts(String search, Integer minPrice, Integer maxPrice, String category) {
-        return productMapper.countSearchProducts(search, minPrice, maxPrice, category);
+    public int countSearchProducts(String search, Integer minPrice, Integer maxPrice, int cate) {
+        return productMapper.countSearchProducts(search, minPrice, maxPrice, cate);
     }
 
 

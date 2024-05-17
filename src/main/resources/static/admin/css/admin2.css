@@ -1,8 +1,10 @@
+/* 폰트 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap');
 /* 초기화 */
 * {
     margin: 0;
     padding: 0;
-    font: normal 12px '고딕';
+    font-family: "Noto Sans KR",  sans-serif ;
 }
 
 ul, ol {list-style: none;}
@@ -547,3 +549,4 @@ button[type=submit] {
     box-sizing: border-box;
     cursor: pointer;
 }
+

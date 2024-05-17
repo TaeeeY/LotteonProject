@@ -208,6 +208,29 @@
                 }
             }
 
+
+            let Top = document.getElementById('top');
+
+            if (Top) {
+                Top.style.display = 'none'
+                window.addEventListener('scroll', function () {
+                    if (window.scrollY > 300) {
+                        Top.style.display = 'block';
+                        console.log(Top);
+                    } else {
+                        Top.style.display = 'none';
+                    }
+                });
+
+                Top.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                    console.log(Top);
+                });
+            } else {
+                console.log("#top 요소를 찾을 수 없습니다.");
+            }
+
         });
 
 
@@ -237,7 +260,8 @@
                 <h3 class="name" th:text="${product.pname}">상품명</h3>
                 <p th:text="${product.info}">상품설명 출력</p>
                 <p id="pno" th:text="${product.pno}" hidden></p>
-                <h5 class="rating star4"><a th:href="@{#}">상품평보기</a></h5>
+                <h5 class="rating star" th:style="'background-position: 0 ' + ${#numbers.formatInteger(Average/0.5,1)} * -20 + 'px'"></h5><a href="#review">상품평보기</a>
+                <div th:text="'평균별점 : ' + ${#numbers.formatDecimal(Average, 1, 'POINT', 1, 'POINT')}" style="font-size: 20px"></div>
             </nav>
             <nav>
                 <!-- 원래 가격을 출력합니다. -->
@@ -287,12 +311,11 @@
 
             <div class="count">
                 <button class="decrease" type="button">-</button>
-                <input type="text" class="quantity" name="num" min="1" value="1" id="count">
+                <input type="text" class="quantity" name="num" min="1" value="1" id="count" readonly>
                 <button class="increase" type="button">+</button>
             </div>
 
-
-            <img src="../images/vip_plcc_banner.png" alt="100원만 결제해도 1만원 적립!" class="banner"/>
+            <img th:each="banner:${banners}" th:if="${banner.blocation.equals('PRODUCT1')} and ${banner.bmanage == 1}" th:src="@{|/uploads/banner/${banner.bfile}|}" class="banner"/>
 
             <div class="total">
                             <span id="totalPrice"
@@ -410,89 +433,28 @@
     </article>
 
     <!-- 상품 리뷰 내용 -->
-    <article class="review">
+    <article id="review" class="review">
         <nav>
             <h1>상품리뷰</h1>
         </nav>
+        <!-- 별점 표시 영역 -->
+        <h5 class="rating star" th:style="'background-position: 0 ' + ${#numbers.formatInteger(Average/0.5,1)} * -20 + 'px'"></h5>
+        <div th:text="'평균별점 : ' + ${#numbers.formatDecimal(Average, 1, 'POINT', 1, 'POINT')}" style="font-size: 20px"></div>
+
+
         <ul>
-            <li>
+            <li th:each="review : ${reviews}">
                 <div>
-                    <h5 class="rating star4">상품평</h5>
-                    <span>seo******	2018-07-10</span>
+                    <h5 th:classappend="'rating star' + ${review.rating}" th:text="${review.rating}">상품평</h5>
+                    <span>[[${review.uid}]]</span><br />
+                    <span th:text="${#temporals.format(review.redate, 'yyyy-MM-dd')}"></span>
                 </div>
-                <h3>상품명1/BLUE/L</h3>
-                <p>
-                    가격대비 정말 괜찮은 옷이라 생각되네요 핏은 음...제가 입기엔 어깨선이 맞고 루즈핏이라 하기도 좀 힘드네요.
-                    아주 약간 루즈한정도...?그래도 이만한 옷은 없다고 봅니다 깨끗하고 포장도 괜찮고 다음에도 여기서 판매하는
-                    제품들을 구매하고 싶네요 정말 만족하고 후기 남깁니다 많이 파시길 바래요 ~ ~ ~
-                </p>
-            </li>
-            <li>
-                <div>
-                    <h5 class="rating star4">상품평</h5>
-                    <span>seo******	2018-07-10</span>
-                </div>
-                <h3>상품명1/BLUE/L</h3>
-                <p>
-                    가격대비 정말 괜찮은 옷이라 생각되네요 핏은 음...제가 입기엔 어깨선이 맞고 루즈핏이라 하기도 좀 힘드네요.
-                    아주 약간 루즈한정도...?그래도 이만한 옷은 없다고 봅니다 깨끗하고 포장도 괜찮고 다음에도 여기서 판매하는
-                    제품들을 구매하고 싶네요 정말 만족하고 후기 남깁니다 많이 파시길 바래요 ~ ~ ~
-                </p>
-            </li>
-            <li>
-                <div>
-                    <h5 class="rating star4">상품평</h5>
-                    <span>seo******	2018-07-10</span>
-                </div>
-                <h3>상품명1/BLUE/L</h3>
-                <p>
-                    가격대비 정말 괜찮은 옷이라 생각되네요 핏은 음...제가 입기엔 어깨선이 맞고 루즈핏이라 하기도 좀 힘드네요.
-                    아주 약간 루즈한정도...?그래도 이만한 옷은 없다고 봅니다 깨끗하고 포장도 괜찮고 다음에도 여기서 판매하는
-                    제품들을 구매하고 싶네요 정말 만족하고 후기 남깁니다 많이 파시길 바래요 ~ ~ ~
-                </p>
-            </li>
-            <li>
-                <div>
-                    <h5 class="rating star4">상품평</h5>
-                    <span>seo******	2018-07-10</span>
-                </div>
-                <h3>상품명1/BLUE/L</h3>
-                <p>
-                    가격대비 정말 괜찮은 옷이라 생각되네요 핏은 음...제가 입기엔 어깨선이 맞고 루즈핏이라 하기도 좀 힘드네요.
-                    아주 약간 루즈한정도...?그래도 이만한 옷은 없다고 봅니다 깨끗하고 포장도 괜찮고 다음에도 여기서 판매하는
-                    제품들을 구매하고 싶네요 정말 만족하고 후기 남깁니다 많이 파시길 바래요 ~ ~ ~
-                </p>
-            </li>
-            <li>
-                <div>
-                    <h5 class="rating star4">상품평</h5>
-                    <span>seo******	2018-07-10</span>
-                </div>
-                <h3>상품명1/BLUE/L</h3>
-                <p>
-                    가격대비 정말 괜찮은 옷이라 생각되네요 핏은 음...제가 입기엔 어깨선이 맞고 루즈핏이라 하기도 좀 힘드네요.
-                    아주 약간 루즈한정도...?그래도 이만한 옷은 없다고 봅니다 깨끗하고 포장도 괜찮고 다음에도 여기서 판매하는
-                    제품들을 구매하고 싶네요 정말 만족하고 후기 남깁니다 많이 파시길 바래요 ~ ~ ~
-                </p>
+                <h3 th:text="${review.options}">상품명1/BLUE/L</h3>
+                <p th:text="${review.content}"></p>
             </li>
         </ul>
-        <div class="paging">
-                        <span class="prev">
-                            <a href="#"><&nbsp;이전</a>
-                        </span>
-            <span class="num">
-                            <a href="#" class="on">1</a>
-                            <a href="#">2</a>
-                            <a href="#">3</a>
-                            <a href="#">4</a>
-                            <a href="#">5</a>
-                            <a href="#">6</a>
-                            <a href="#">7</a>
-                        </span>
-            <span class="next">
-                            <a href="#">다음&nbsp;></a>
-                        </span>
-        </div>
+
+
 
     </article>
 

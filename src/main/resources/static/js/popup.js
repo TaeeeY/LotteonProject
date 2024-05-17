@@ -25,12 +25,13 @@ $(function(){
         $('#popReceive').addClass('on');
     });
 
+    /*
     // 상품평 작성 팝업 띄우기
     $('.latest .confirm > .review').click(function(e){
         e.preventDefault();
         $('#popReview').addClass('on');
     });
-
+*/
 
                
     // 팝업 닫기
@@ -51,5 +52,7 @@ $(function(){
             console.log('DOM element ', $el);
         }
     });
+
+
 
 });

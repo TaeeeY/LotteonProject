@@ -28,7 +28,11 @@
 
                 <a sec:authorize="isAuthenticated()" th:href="@{/mypage/}">[[${#authentication.principal.user.name}]]</a>
                 <a sec:authorize="isAuthenticated()" th:href="@{/product/cart}"><i class="fa fa-shopping-cart" aria-hidden="true"></i>장바구니</a>
-                <a sec:authorize="isAuthenticated()" th:href="@{/admin/index}">관리자</a>
+                <th:block th:if="${#authentication.principal != 'anonymousUser'}">
+                    <th:block th:if="${#authentication.principal.user.role == 'ADMIN'}">
+                        <a th:href="@{/admin/index}">관리자</a>
+                    </th:block>
+                </th:block>
                 <a sec:authorize="isAuthenticated()" th:href="@{/member/logout}">로그아웃</a>
             </div>
         </div>
@@ -43,10 +47,10 @@
          </main>
     <footer>
         <ul>
-            <li><a th:href="@{#}">회사소개</a></li>
-            <li><a th:href="@{#}">서비스이용약관</a></li>
-            <li><a th:href="@{#}">개인정보처리방침</a></li>
-            <li><a th:href="@{#}">전자금융거래약관</a></li>
+            <li><a th:href="@{/company}">회사소개</a></li>
+            <li><a th:href="@{/policy/buyer}">서비스이용약관</a></li>
+            <li><a th:href="@{/policy/privacy}">개인정보처리방침</a></li>
+            <li><a th:href="@{/policy/finance}">전자금융거래약관</a></li>
         </ul>
         <div>
             <p><img th:src="@{/images/footer_logo.png}" alt="로고" /></p>

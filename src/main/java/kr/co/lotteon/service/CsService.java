@@ -15,6 +15,8 @@ import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Log4j2
@@ -128,6 +131,16 @@ public class CsService {
     }
 
 
+    // 🎈faq 게시판 총 갯수 카운트
+    public int selectFaqTotal(){
+        return faqMapper.selectFaqTotal();
+    }
+
+    // 🎈faq 게시판 cate로 참고한 총 갯수 카운트
+    public int selectFaqTotalCate(int cate1){
+        return faqMapper.selectFaqTotalCate(cate1);
+    }
+
     // myqna 게시판 총 갯수 카운트
     public String selectMyQnaTotal(String uid) {
         return mypageMapper.selectMyQnaTotal(uid);
@@ -160,6 +173,7 @@ public class CsService {
         int currentPageGroup = (int)Math.ceil(currentPage / 10.0);
         int pageGroupStart = (currentPageGroup - 1) * 10 + 1;
         int pageGroupEnd = currentPageGroup * 10;
+
 
         if(pageGroupEnd > lastPageNum){
             pageGroupEnd = lastPageNum;
@@ -196,6 +210,11 @@ public class CsService {
         return noticeMapper.selectNoticeListCate(cate1, start);
     }
 
+    // noticeList cate 참조
+    public List<FaqDTO> selectFaqListCate (int cate1, int start){
+        return faqMapper.selectFaqListCate(cate1, start);
+    }
+
     // qnaList 전체
 
     public List<QnaDTO> selectQnaListAll(int start){
@@ -221,7 +240,7 @@ public class CsService {
         return noticeMapper.selectNoticeView(noticeno);
     }
     public QnaDTO selectQnaView(int qnano){
-        return qnaMapper.selectQnaBoard(qnano);
+        return qnaMapper.adminSelectQnaView(qnano);
     }
     public FaqDTO selectFaqView(int faqno){
         return faqMapper.selectFaqView(faqno);
@@ -231,6 +250,9 @@ public class CsService {
     // CsFaq 리스트
     public List<FaqDTO> selectFaqList10(int cate1){
         return faqMapper.selectFaqList10(cate1);
+    }
+    public List<FaqDTO> selectFaqListAll (int start){
+        return faqMapper.selectFaqListAll(start);
     }
 
     //////////////////////////////////////////
@@ -251,14 +273,57 @@ public class CsService {
         log.info("insertNotice : " + savedNoticeBoard);
     }
 
+    //🎈 공지사항 리스트
+    public List<NoticeDTO> noticeList(){
+
+        return noticeRepository.findAll()
+                .stream()
+                .map(
+                        CsNotice::toDTO
+                )
+                .collect(Collectors.toList());
+    }
 
 
-    // 🎈Admin Notice view
+    // 🎈공지사항 리스트 페이징
+    public PageResponseDTO noticeList(PageRequestDTO pageRequestDTO){
+        Pageable pageable = pageRequestDTO.getPageable("noticeno");
+        Page<CsNotice> result = null;
+        if(pageRequestDTO.getCate1() == 0){
+            if(pageRequestDTO.getSearch() == ""){
+                result = noticeRepository.findAll(pageable);
+            }else{
+                result = noticeRepository.findByTitleContains(pageRequestDTO.getSearch(), pageable);
+            }
+        }else{
+            if(pageRequestDTO.getSearch().equals("")){
+                result = noticeRepository.findByCate1(pageRequestDTO.getCate1(), pageable);
+            }else{
+                result = noticeRepository.findByCate1AndTitleContains(pageRequestDTO.getCate1(), pageRequestDTO.getSearch(), pageable);
+            }
+        }
+        List<NoticeDTO> dtoList = result.getContent()
+                .stream()
+                .map(
+                        CsNotice::toDTO
+                )
+                .toList();
+        int totalElement = (int) result.getTotalElements();
+        return PageResponseDTO.builder()
+                .pageRequestDTO(pageRequestDTO)
+                .noticeList(dtoList)
+                .total(totalElement)
+                .build();
+    }
+
+
+
+    // 🎈Admin 공지사항 view
     public NoticeDTO adminSelectNoticeView(int noticeno){
         return noticeMapper.adminSelectNoticeView(noticeno);
     }
 
-    // 🎈 Admin Notice 수정
+    // 🎈 Admin 공지사항 수정
     public NoticeDTO adminSelectNoticeBoard(int noticeno){
         log.info("noticeno" + noticeno);
         return noticeMapper.adminSelectNoticeBoard(noticeno);
@@ -268,14 +333,16 @@ public class CsService {
         noticeMapper.adminUpdateNoticeBoard(dto);
     }
 
-    // 🎈 Admin Notice 삭제
+    // 🎈 Admin 공지사항 삭제
     public void adminDeleteNoticeBoard(int noticeno) {
         noticeMapper.adminDeleteNoticeBoard(noticeno);
     }
 
+    
+    
     //✨자주묻는질문✨//
 
-    // 🎈Admin Faq 글등록
+    // 🎈Admin 자주묻는질문 글등록
     public void adminInsertFaq(FaqDTO faqDTO){
 
         // faqDTO를 faqEntity로 변환
@@ -287,22 +354,29 @@ public class CsService {
     }
 
 
-    // 🎈Admin Faq 리스트
+    // 🎈Admin 자주묻는질문 리스트
+
     public List<FaqDTO> selectFaqList(){
-        return faqMapper.selectFaqList();
+
+        return faqRepository.findAll()
+                .stream()
+                .map(
+                        CsFaq::toDTO
+                )
+                .collect(Collectors.toList());
     }
 
-    // 🎈Admin Faq 리스트 카테고리
+    // 🎈Admin 자주묻는질문 리스트 카테고리
     public List<Cate2DTO> adminSelectCate2(){
         return cateMapper.adminSelectCate2();
     }
 
-    // 🎈Admin Faq view
+    // 🎈Admin 자주묻는질문 view
     public FaqDTO adminSelectFaqView(int faqno){
         return faqMapper.adminSelectFaqView(faqno);
     }
 
-    // 🎈Admin Faq 수정
+    // 🎈Admin 자주묻는질문 수정
     public FaqDTO adminSelectFaqBoard(int faqno){
         log.info("faqno : " + faqno);
         return faqMapper.adminSelectFaqBoard(faqno);
@@ -312,16 +386,51 @@ public class CsService {
         faqMapper.adminUpdateFaqBoard(dto);
     }
 
-    // 🎈 Admin Faq 삭제
+    // 🎈 Admin 자주묻는질문 삭제
     public void adminDeleteFaqBoard(int faqno) {
         faqMapper.adminDeleteFaqBoard(faqno);
     }
+
+    // FAQ 리스트
+    public PageResponseDTO faqList(PageRequestDTO pageRequestDTO){
+        Pageable pageable = pageRequestDTO.getPageable("faqno");
+        Page<CsFaq> result = null;
+        if(pageRequestDTO.getCate1() == 0){
+            if(pageRequestDTO.getSearch() == ""){
+                result = faqRepository.findAll(pageable);
+            }else{
+                result = faqRepository.findByTitleContains(pageRequestDTO.getSearch(), pageable);
+            }
+        }else{
+            if(pageRequestDTO.getSearch().equals("")){
+                result = faqRepository.findByCate1(pageRequestDTO.getCate1(), pageable);
+            }else{
+                result = faqRepository.findByCate1AndTitleContains(pageRequestDTO.getCate1(), pageRequestDTO.getSearch(), pageable);
+            }
+        }
+        List<FaqDTO> dtoList = result.getContent()
+                .stream()
+                .map(
+                        CsFaq::toDTO
+                )
+                .toList();
+        int totalElement = (int) result.getTotalElements();
+        return PageResponseDTO.builder()
+                .pageRequestDTO(pageRequestDTO)
+                .faqList(dtoList)
+                .total(totalElement)
+                .build();
+    }
+
+
+
 
 
     //✨1:1 문의✨//
 
     // 🎈 Admin Qna 리스트
     public List<QnaDTO> adminSelectQnaList(){
+
         return  qnaMapper.adminSelectQnaList();
     }
 
@@ -352,6 +461,39 @@ public class CsService {
     }
 
 
+    // Qna 페이지 리스트
+    public PageResponseDTO qnaList(PageRequestDTO pageRequestDTO){
+        Pageable pageable = pageRequestDTO.getPageable("qnano");
+        Page<CsQna> result = null;
+        if(pageRequestDTO.getCate1() == 0){
+            if(pageRequestDTO.getSearch() == ""){
+                result = qnaRepository.findAll(pageable);
+            }else{
+                result = qnaRepository.findByTitleContains(pageRequestDTO.getSearch(), pageable);
+            }
+        }else{
+            if(pageRequestDTO.getSearch().equals("")){
+                result = qnaRepository.findByCate1(pageRequestDTO.getCate1(), pageable);
+            }else{
+                result = qnaRepository.findByCate1AndTitleContains(pageRequestDTO.getCate1(), pageRequestDTO.getSearch(), pageable);
+            }
+        }
+        List<QnaDTO> dtoList = result.getContent()
+                .stream()
+                .map(
+                        CsQna::toDTO
+                )
+                .toList();
+        int totalElement = (int) result.getTotalElements();
+        return PageResponseDTO.builder()
+                .pageRequestDTO(pageRequestDTO)
+                .qnaList(dtoList)
+                .total(totalElement)
+                .build();
+    }
+
+
+
     // 🎈 Admin Qna 뷰 코멘트
     public List<CsQna> selectComments(int qnano){
         return qnaRepository.findByQnano(qnano);
@@ -375,17 +517,28 @@ public class CsService {
         return qnaMapper.selectQnaChildBoard(qnano);
     }
 
-
+/*
     // myqna 답변
-    public List<QnaDTO> selectCsQnaComment(int qnano){
-        return mypageMapper.selectCsQnaComment(qnano);
+    public List<QnaDTO> selectCsQnaCommentView(int qnano){
+        return mypageMapper.selectCsQnaCommentView(qnano);
     }
+ */
 
     // 🎈Qna 답변 등록
     private final ReplyRepository replyRepository;
     private final ModelMapper modelMapper;
 
     public ResponseEntity<Reply> insertReply(ReplyDTO replyDTO) {
+
+        Optional<CsQna> optQna = qnaRepository.findById(replyDTO.getQnano());
+        if(optQna.isPresent()){
+            CsQna qna = optQna.get();
+            if(qna.getAnswercomplete() != 2){
+                qna.setAnswercomplete(2);
+                qnaRepository.save(qna);
+            }
+
+        }
         Reply reply = modelMapper.map(replyDTO,Reply.class);
         Reply savedQna = replyRepository.save(reply);
         log.info("savedQna : " + savedQna);
@@ -411,13 +564,13 @@ public class CsService {
     // 🎈 Qna 답변 수정
     public ResponseEntity<?> updateReply(ReplyDTO replyDTO){
         // 수정하기 전에 먼저 존재여부 확인
-        Optional<Reply> optArticle = replyRepository.findById(replyDTO.getQnano());
+        Optional<Reply> optArticle = replyRepository.findById(replyDTO.getReplyno());
 
         if(optArticle.isPresent()) {
 
             Reply reply = optArticle.get();
             // 어쩔수 없이 Article 엔티티에 @Setter 선언해서 수정하기
-            reply.setContent(replyDTO.getContent());
+            reply.setRcontent(replyDTO.getRcontent());
 
             log.info("reply : " + reply);
 
@@ -440,29 +593,31 @@ public class CsService {
         log.info("replyno : " + qnano);
 
         // 삭제 전 조회
-
         Optional<Reply> optReply = replyRepository.findById(qnano);
 
         log.info("optReply : " + optReply);
 
         if(optReply.isPresent()){
             log.info("here1");
+            // 삭제된 답변의 Answercomplete 값을 다시 1로 설정
+            Optional<CsQna> optQna = qnaRepository.findById(optReply.get().getQnano());
+            optQna.ifPresent(qna -> {
+                qna.setAnswercomplete(1);
+                qnaRepository.save(qna);
+            });
 
             replyRepository.deleteById(qnano);
 
             return ResponseEntity
                     .ok()
                     .body(optReply.get());
-        }else{
+        } else {
             log.info("here2");
-
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body("not found");
         }
     }
-
-
 
 
 }

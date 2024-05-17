@@ -1,21 +1,30 @@
 package kr.co.lotteon.controller.admin;
 
-import kr.co.lotteon.dto.BannerDTO;
-import kr.co.lotteon.dto.NoticeDTO;
-import kr.co.lotteon.dto.QnaDTO;
+import kr.co.lotteon.dto.*;
 import kr.co.lotteon.entity.Banner;
 import kr.co.lotteon.service.AdminService;
 import kr.co.lotteon.service.CsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnailator;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Controller
@@ -66,6 +75,8 @@ public class AdminConfigController {
         // 페이지 시작 번호
         int pageStartNum = csService.getPageStartNum(total, currentPage);
 
+        model.addAttribute("user", adminService.selectRegUser());
+
         model.addAttribute("noticeDTOS", noticeDTOS);
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("lastPageNum", lastPageNum);
@@ -80,7 +91,12 @@ public class AdminConfigController {
         List<QnaDTO> qnaDTOS = csService.adminSelectQnaList();
         model.addAttribute("qnaDTOS", qnaDTOS);
 
-
+        List<OrdersDTO> monthSales = adminService.selectOrderByMonth();
+        List<OrdersDTO> weekSales = adminService.selectOrderByWeek();
+        List<OrdersDTO> cateName =  adminService.selectCountAndCateName();
+        model.addAttribute("monthSales", monthSales);
+        model.addAttribute("weekSales", weekSales);
+        model.addAttribute("cateName", cateName);
 
         log.info("index.. ");
         return "/admin/index";
@@ -97,17 +113,10 @@ public class AdminConfigController {
     @PostMapping( "/admin/config/banner/register")
     public String banner(BannerDTO bannerDTO,
                          @RequestParam("file") MultipartFile file)  {
-        bannerDTO.setBfile(String.valueOf(file));
-        bannerDTO.setBmanage(Integer.toString(1));
-        log.info("bfile : " + bannerDTO.getBfile());
-        log.info("BannerDTO : " + bannerDTO);
-        Banner savedBanner = adminService.insertBanner(bannerDTO);
-        log.info("savedBanner" + savedBanner);
 
-
-        BannerDTO savedBannerDTO = modelMapper.map(savedBanner, BannerDTO.class);
-        log.info("savedBannerDTO : " + savedBannerDTO);
-        return "redirect:/admin/config/bannerList";
+        Banner savedBanner = adminService.insertBanner(bannerDTO,file);
+        log.info("savedBanner : " + savedBanner);
+        return "redirect:/admin/config/bannerList"; // 파일이 업로드되지 않았을 때 처리할 로직
     }
 
     // 🎈 banner 리스트
@@ -135,16 +144,14 @@ public class AdminConfigController {
     // 🎈 banner 활성
     @GetMapping("/admin/config/bannerList/active")
     public String activeBanner(Model model, int bno){
-        model.addAttribute("bno", bno);
-        log.info("activeBno: " + bno);
+        adminService.activateBanner(bno);
         return "redirect:/admin/config/bannerList";
     }
 
     // 🎈 banner 비활성
     @GetMapping("/admin/config/bannerList/deActivate")
     public String deActiveBanner(Model model, int bno){
-        model.addAttribute("bno", bno);
-        log.info("deActivateBno :" + bno);
+        adminService.deActivateBanner(bno);
         return "redirect:/admin/config/bannerList";
     }
 

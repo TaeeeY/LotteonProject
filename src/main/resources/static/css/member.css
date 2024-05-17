@@ -1,3 +1,12 @@
+/* 폰트 */
+@font-face {
+  font-family: 'S-CoreDream-3Light';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+
 /* member 공통 */
 header {
   width: 100%;
@@ -8,6 +17,7 @@ header {
 #member {
   padding: 60px 0;
   box-sizing: border-box;
+  font: normal 12px 'S-CoreDream-3Light';
 }
 
 #member > div > nav > p {
@@ -146,6 +156,7 @@ header {
   height: 50px;
   border: none;
   font-size: 18px;
+  cursor: pointer;
 }
 
 #member > .login > form > span {
@@ -154,6 +165,7 @@ header {
   margin-top: 5px;
   position: absolute;
   bottom: 145px;
+  cursor: pointer;
 }
 #member > .login > form > span a {
   display: inline-block;
@@ -168,10 +180,26 @@ header {
 #member > .login > form > span a:last-child {
 }
 
+#member > .login > form > .oauth2 {
+  position: absolute;
+  bottom: 75px;
+  left: 215px;
+  cursor: pointer;
+}
+
+#member > .login > form > .oauth2 > .google {
+  width: 30px;
+  border: 1px solid #6e6e6e;
+  border-radius: 50%;
+  padding: 6px;
+}
+
+
 #member > .login > form > .banner {
   position: absolute;
   right: 0;
   top: 16px;
+  cursor: pointer;
 }
 
 #member > .login > form > span > label {

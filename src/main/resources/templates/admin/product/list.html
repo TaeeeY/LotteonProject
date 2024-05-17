@@ -13,7 +13,9 @@
     <link th:href="@{/admin/css/sb-admin-2.min.css}" rel="stylesheet">
     <link th:href="@{/admin/css/admin.css}" rel="stylesheet">
     <style>
-
+        #productList #searchBox .searchInput {
+            top: 0;
+        }
     </style>
     <script>
         window.onload = function () {
@@ -23,7 +25,8 @@
 
             const pdelete = document.getElementById('delete');
             pdelete.onclick = function (){
-                if (confirm('삭제하시겠습니까?')){
+                let confirmed = confirm('삭제하시겠습니까?');
+                if (confirmed){
                     return true;
                 }else{
                     return false;
@@ -72,22 +75,23 @@
             <!-- DataTales Example -->
             <div class="card mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">상품목록</h6>
+                    <h6 class="m-0 font-weight-bold" style="color: #ffffff;">상품목록</h6>
                 </div>
 
                 <div class="card-body">
                     <div class="table-responsive">
 
-                        <form th:action="@{/admin/product/search}" method="get">
+                        <form th:action="@{/admin/product/list}" method="get">
                             <div id="searchBox">
-                                <select name="searchOption" id="searchOption">
+                                <select name="type" id="searchOption">
                                     <option value="pname">상품명</option>
+                                    <option value="pno">상품번호</option>
+                                    <option value="seller">판매자</option>
                                     <option value="company">제조사</option>
-                                    <option value="seller">판매사</option>
                                 </select>
-                                <input type="search" class="searchInput" name="search" placeholder="검색어를 입력하세요.">
+                                <input type="search" class="searchInput" name="keyword" placeholder="검색어를 입력하세요.">
                                 <button class="searchBtn">
-                                    <img th:src="@{/admin/img/search_30.png}" alt="검색">
+                                    <img th:src="@{/admin/img/search_40.png}" alt="검색">
                                 </button>
                             </div><!--검색박스 end-->
                         </form>
@@ -114,7 +118,7 @@
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        <tr th:each="product: ${adminProducts}">
+                                        <tr th:each="product: ${adminProducts.anyList}" th:style="${product.deldate != null ? 'color:red':''}">
                                             <td>
                                                 <input type="checkbox" name="checkbox" th:value="${product.pno}">
                                             </td>
@@ -131,8 +135,8 @@
                                             <td>[[${product.hit}]]</td>
                                             <td th:text="${#temporals.format(product.rdate, 'yyyy-MM-dd')}"></td>
                                             <td>
-                                                <a th:href="@{/admin/product/delete(pno=${product.pno})}" id="delete">[삭제]</a>
-                                                <a th:href="@{/admin/product/modify(pno=${product.pno})}">[수정]</a>
+                                                <a th:if="${product.deldate} == null" th:href="@{/admin/product/delete(pno=${product.pno})}" id="delete">[삭제]</a>
+                                                <a th:if="${product.deldate} == null" th:href="@{/admin/product/modify(pno=${product.pno})}">[수정]</a>
                                             </td>
                                         </tr>
                                         </tbody>
@@ -147,16 +151,29 @@
                 <!--paging-->
                 <nav aria-label="...">
                     <ul class="pagination">
-                        <li class="page-item disabled">
-                            <a class="page-link">Previous</a>
-                        </li>
-                        <li class="page-item"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item active" aria-current="page">
-                            <a class="page-link" href="#">2</a>
-                        </li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
                         <li class="page-item">
-                            <a class="page-link" href="#">Next</a>
+                            <a th:if="${adminProducts.pg} > 1 and ${adminProducts.keyword} == null"
+                               th:href="@{/admin/product/list(pg=${adminProducts.pg - 1})}"
+                               th:class="page-link">이전</a>
+                            <a th:if="${adminProducts.pg} > 1 and ${adminProducts.keyword} != null"
+                               th:href="@{/admin/product/list(pg=${adminProducts.pg - 1},type=${adminProducts.type},keyword=${adminProducts.keyword})}"
+                               th:class="page-link">이전</a>
+                        </li>
+                        <li th:class="${i == adminProducts.pg ? 'page-item active' : 'page-item'}" th:each="i : ${#numbers.sequence(1, adminProducts.totalPage)}">
+                            <a th:if="${adminProducts.keyword} == null"
+                               th:href="@{/admin/product/list(pg=${i})}"
+                               class="page-link">[[${i}]]</a>
+                            <a th:if="${adminProducts.keyword} != null"
+                               th:href="@{/admin/product/list(pg=${i},type=${adminProducts.type},keyword=${adminProducts.keyword})}"
+                               class="page-link">[[${i}]]</a>
+                        </li>
+                        <li class="page-item">
+                            <a th:if="${adminProducts.pg} < ${adminProducts.totalPage} and ${adminProducts.keyword} == null"
+                               th:href="@{/admin/product/list(pg=${adminProducts.pg + 1})}"
+                               th:class="page-link">다음</a>
+                            <a th:if="${adminProducts.pg} < ${adminProducts.totalPage} and ${adminProducts.keyword} != null"
+                               th:href="@{/admin/product/list(pg=${adminProducts.pg + 1},type=${adminProducts.type},keyword=${adminProducts.keyword})}"
+                               th:class="page-link">다음</a>
                         </li>
                     </ul>
                 </nav>

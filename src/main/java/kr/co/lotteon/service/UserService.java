@@ -25,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -88,6 +89,10 @@ public class UserService {
         if(optUserDetail.isPresent()){
             UserDetail userDetail = optUserDetail.get();
             int result = userDetail.getPoint() - point + savepoint;
+            log.info(userDetail.getPoint() + "원래포인트");
+            log.info(point + "사용포인트");
+            log.info(savepoint + "적립포인트");
+            log.info(result + "최종포인트");
             userDetail.setPoint(result);
 
             userDetailRepository.save(userDetail);
@@ -170,6 +175,11 @@ public class UserService {
         return userMapper.selectUser(uid);
     }
 
+    public UserDTO selectSeller(String uid){
+        log.info(userMapper.selectSeller(uid));
+        return userMapper.selectSeller(uid);
+    }
+
     public String getUid(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if(authentication != null && authentication.isAuthenticated()){
@@ -238,4 +248,39 @@ public class UserService {
         }
     }
 
+    // 비밀번호 찾기를 통한 비밀번호 재설정
+    public void updatePass(String uid, String pass) {
+        pass = passwordEncoder.encode(pass);
+        User entity = userRepository.findById(uid).get();
+        entity.setPass(pass);
+        userRepository.save(entity);
+    }
+
+    // 회원 탈퇴
+    public void updateWdate(String uid) {
+        User entity = userRepository.findById(uid).get();
+        entity.setLeaveDate(LocalDateTime.now());
+        userRepository.save(entity);
+    }
+
+    // 회원정보 수정 (이메일, 전화번호, 주소)
+    public void updateUser(UserDTO userDTO) {
+        User entity = userRepository.findById(userDTO.getUid()).get();
+        entity.setEmail(userDTO.getEmail());
+        entity.setHp(userDTO.getHp());
+        entity.setZip(userDTO.getZip());
+        entity.setAddr1(userDTO.getAddr1());
+        entity.setAddr2(userDTO.getAddr2());
+        if (entity.getRole().equals("SELLER")){
+            Seller entitySeller = sellerRepository.findById(userDTO.getUid()).get();
+            entitySeller.setCompany(userDTO.getCompany());
+            entitySeller.setRepresent(userDTO.getRepresent());
+            entitySeller.setRegnum(userDTO.getRegnum());
+            entitySeller.setReportnum(userDTO.getReportnum());
+            entitySeller.setCohp(userDTO.getCohp());
+            entitySeller.setFax(userDTO.getFax());
+            sellerRepository.save(entitySeller);
+        }
+        userRepository.save(entity);
+    }
 }

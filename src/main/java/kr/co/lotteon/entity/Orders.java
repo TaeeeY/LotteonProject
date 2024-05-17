@@ -31,9 +31,9 @@ public class Orders {
     private String addr1;
     private String addr2;
     private String payment;
-    private String request;
     private int total;
 
-    private int discount;
-    private int dfee;
+
+
+
 }

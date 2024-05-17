@@ -17,9 +17,11 @@ public class ReviewDTO {
 
     private int rno;
     private int pno;
+    private String pname;
     private String uid;
     private String content;
     private int rating;
+    private String options;
     private LocalDateTime redate;
 
 

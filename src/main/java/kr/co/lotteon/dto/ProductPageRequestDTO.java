@@ -1,35 +1,44 @@
 package kr.co.lotteon.dto;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import lombok.*;
+import org.springframework.data.domain.*;
 
 import java.util.List;
 
-@Data
-@Builder
-@NoArgsConstructor
+@Getter
+@Setter
 @AllArgsConstructor
+@NoArgsConstructor
+@ToString
+@Builder
 public class ProductPageRequestDTO {
 
     @Builder.Default
-    private int pg = 1;
+    private int pg=1;
     @Builder.Default
-    private int size = 10;
+    private int size=10;
+
+    private String beginDate; // 날짜 필터링 시작 날짜
+    private String endDate; // 날짜 필터링 종료 날짜
+
+    @Builder.Default
+    private int cate1 = 0;
+    @Builder.Default
+    private int cate2 = 0;
+
+
     @Builder.Default
     private String search = "";
 
-    //🎈 상품검색 특화 필드
+    private Integer minPrice;
+    private Integer maxPrice;
+
+    private List<String> chk;
+    private int pno;
+
+    private int ono;
+
     private String type;
     private String keyword;
-    private String company;
-    private String seller;
-    private String pname;
-    private String cate;
 
     public Pageable getPageable(String sort){
         return PageRequest.of(
@@ -38,4 +47,11 @@ public class ProductPageRequestDTO {
                 Sort.by(sort).descending()
         );
     }
+
+    //🎈 상품검색
+
+    private String company;
+    private String seller;
+    private String pname;
+    private int cate;
 }

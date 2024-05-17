@@ -7,16 +7,28 @@
     <ul>
         <span class="menu_else"></span>
         <li><a th:href="@{/mypage/order}">전체주문내역</a></li>
-        <!--<li><a href="./favorite.html">관심상품</a></li>-->
         <li><a th:href="@{/mypage/point}">포인트내역</a></li>
-        <li><a th:href="@{/mypage/coupon}">쿠폰</a></li>
         <li><a th:href="@{/mypage/review}">나의리뷰</a></li>
         <li><a th:href="@{/mypage/qna}">문의하기</a></li>
-        <li><a th:href="@{/mypage/info}">나의설정</a></li>
+        <li>
+            <th:block th:if="${#authentication.principal != 'anonymousUser'}">
+                <th:block th:if="${#authentication.principal.user.role == 'USER'}">
+                    <a th:href="@{/mypage/infoAccessCheck}">나의설정</a>
+                </th:block>
+                <th:block th:if="${#authentication.principal.user.role == 'ADMIN'}">
+                    <a th:href="@{/mypage/infoAccessCheck}">나의설정</a>
+                </th:block>
+                <th:block th:if="${#authentication.principal.user.role == 'SELLER'}">
+                    <a th:href="@{/mypage/infoAccessCheckSeller}">나의설정</a>
+                </th:block>
+            </th:block>
+        </li>
     </ul>
 
     <section>
-        <a href="#"><img th:src="@{/images/my_banner2.png}" alt="패션, 타운 하나로 끝" class="banner"></a>
+        <a th:href="@{/}" class="banner" th:each="banner:${banners}" th:if="${banner.blocation.equals('MY1')} and ${banner.bmanage == 1}">
+            <img th:src="@{|/uploads/banner/${banner.bfile}|}">
+        </a>
         <article>
             <h3>나의리뷰</h3>
 
@@ -33,8 +45,8 @@
                 <tbody>
                 <tr th:each="review, iterStat : ${reviews}">
                     <td class="no" th:text="${iterStat.count}">5</td>
-                    <td class="prodName">
-                        <a th:href="@{/product/view(pno=${review.pno})}" th:text="${review.pno}">상품명</a>
+                    <td class="prodName" th:text="${review.pname}">
+                        <a th:href="@{/product/view(pno=${review.pno})}" th:text="${review.pname}">상품명</a>
                     </td>
                     <td class="content" th:text="${review.content}">배송이 빠릅니다. 잘 사용하겠습니다.</td>
                     <td class="score">
@@ -45,18 +57,6 @@
                 </tbody>
 
             </table>
-            <p class="page">
-                <!-- 이전 페이지 링크 -->
-                <a th:if="${result.prev}" th:href="@{/mypage/review(pg=${result.start - 1})}" class="prev">이전</a>
-                <!-- 숫자 페이지 링크 -->
-                <span th:each="pageNum : ${#numbers.sequence(result.start, result.end)}">
-                    <a th:href="@{/mypage/review(pg=${pageNum})}" th:text="${pageNum}" th:class="${pageNum == result.pg ? 'num on' : 'num'}"></a>
-                </span>
-                <!-- 다음 페이지 링크 -->
-                <a th:if="${result.next}" th:href="@{/mypage/review(pg=${result.end + 1})}" class="next">다음</a>
-            </p>
-
-
         </article>
     </section>
 </div>

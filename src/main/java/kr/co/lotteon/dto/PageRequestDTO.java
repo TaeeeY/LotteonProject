@@ -11,10 +11,16 @@ import org.springframework.data.domain.*;
 public class PageRequestDTO {
 
     @Builder.Default
+    private int no = 1;
+
+    @Builder.Default
     private int pg=1;
 
     @Builder.Default
     private int size=10;
+
+    private String beginDate; // 날짜 필터링 시작 날짜
+    private String endDate; // 날짜 필터링 종료 날짜
 
     @Builder.Default
     private int cate1 = 0;
@@ -44,5 +50,9 @@ public class PageRequestDTO {
     private String company;
     private String seller;
     private String pname;
-    private String cate;
+    private int cate;
+
+    //🎈 user 검색
+    private String role;
+
 }

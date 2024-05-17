@@ -1,56 +1,117 @@
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" xmlns="http://www.w3.org/1999/html"
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{/layout/UserLayout}">
 
 <!-- 장바구니 페이지 시작 -->
 <section class="cart" layout:fragment="content">
+
     <script th:inline="javascript">
-        window.onunload = function () {
-            const pnos = document.getElementsByName('productSelect');
-            const pcounts = document.getElementsByName('pcount');
-
-
-            const products = [[${cartProducts}]];
-            products.forEach(function (product, i){
-                const pnoValue = pnos[i].value;
-                const pcountValue = pcounts[i].value;
-
-                if (parseInt(product.pno) === parseInt(pnoValue) && parseInt(product.pcount) !== parseInt(pcountValue)){
-                    const jsonData = {
-                        "pno": pnoValue,
-                        "pcount": pcountValue
-                    };
-
-                    const url = '/lotteon/product/cart/update';
-                    const data = fetchPost(url, jsonData);
-                    console.log(data);
-                    pcounts[i].value = data.pcount;
-                }
-            })
-        }
         document.addEventListener('DOMContentLoaded', function () {
             updateTotalSum(); // 페이지 로드 시 전체 금액 업데이트
 
             const count = document.getElementsByName('pcount');
             count.forEach(function (tag) {
                 tag.onchange = function () {
+                    if (tag.value < 1) {
+                        alert("수량은 1 이상이어야 합니다.");
+                        tag.value = 1;
+                    }
                     updateTotalSum();
+                    updateCartItem(tag);
                 }
             });
 
+            const cartForm = document.getElementById('cartForm');
+
+            if (cartForm) {
+                cartForm.addEventListener('submit', function(event) {
+                    event.preventDefault(); // 기본 폼 제출 동작 방지
+                    updateHiddenFields(); // 숨겨진 필드 업데이트
+                    cartForm.submit(); // 실제 폼 제출
+                });
+            }
+
+            function updateCartItem(tag) {
+                const pno = tag.closest('tr').querySelector('input[name="productSelect"]').value;
+
+                const jsonData = {
+                    "pno": pno,
+                    "pcount": tag.value
+                };
+
+                fetch('/lotteon/product/cart/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(jsonData)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Cart item updated:', data);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            function updateHiddenFields() {
+                const pcounts = document.getElementsByName('pcount');
+                const pnos = document.getElementsByName('productSelect');
+
+                // 기존 숨겨진 input 제거
+                document.querySelectorAll('input[name^="products["]').forEach(input => {
+                    input.remove();
+                });
+
+                // 새로운 숨겨진 input 추가
+                pnos.forEach((pno, i) => {
+                    const jsonData = {
+                        "pno": pno.value,
+                        "pcount": pcounts[i].value
+                    };
+
+                    fetch('/lotteon/product/cart/update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(jsonData)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (i === pnos.length - 1) {
+                                // 모든 업데이트가 완료된 후 폼을 제출
+                                cartForm.submit();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                });
+            }
+
+            // 초기화 시 숨겨진 필드 업데이트
+            updateHiddenFields();
+
             // 전체 선택 체크박스 이벤트 핸들러 추가
             const selectAllCheckbox = document.getElementById('selectAll');
-            selectAllCheckbox.addEventListener('change', function () {
-                toggleSelectAll(this);
-                updateTotalSum(); // 전체 선택 시 합계 다시 계산
-            });
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function () {
+                    toggleSelectAll(this);
+                    updateTotalSum(); // 전체 선택 시 합계 다시 계산
+                });
+            }
 
             document.querySelectorAll('input[name="productSelect"]').forEach(checkbox => {
                 checkbox.addEventListener('change', updateTotalSum); // 체크박스 변경 시 합계 업데이트
             });
 
             window.submitDeleteForm = function () {
-                const checkboxes = document.querySelectorAll('input[name="productSelect"]:checked');
+                const form = document.getElementById('deleteForm');
+                const checkboxes = form.querySelectorAll('input[name="productSelect"]:checked');
                 if (checkboxes.length === 0) {
                     alert('삭제할 상품을 선택하세요.');
                     return;
@@ -92,33 +153,61 @@
                 let deliveryFee = 0;
                 let price1 = 0;
 
-
                 document.querySelectorAll('tr.cart-item-row').forEach(row => {
-                    console.log(row.querySelector('.pcount').children[0].value);
                     const quantity = parseInt(row.querySelector('.pcount').children[0].value);
                     const price = parseFloat(row.querySelector('.price').innerText.replace(/,/g, ''));
                     const itemDiscount = parseFloat(row.querySelector('.discount').innerText.replace('%', '')) / 100;
                     const itemDeliveryFee = parseFloat(row.querySelector('.delivery').innerText.replace(/,/g, '').replace('무료배송', '0'));
 
-                    totalAmount += (price * quantity) * (1 - itemDiscount);
                     discount += (price * itemDiscount) * quantity;
                     deliveryFee += itemDeliveryFee;
                     totalItems += quantity;
-                    price1 += price;
-
-                    console.log(totalAmount);
+                    totalAmount += (price * quantity) * (1 - itemDiscount) + deliveryFee;
+                    price1 += price * quantity;
                 });
 
-
                 document.getElementById('totalItems').innerText = totalItems;
-                document.getElementById('price').innerText = (price1 * totalItems).toLocaleString() + '원';
-                document.getElementById('totalAmount').innerText = totalAmount.toLocaleString() + '원';
-                document.getElementById('totalDiscount').innerText = (discount * -1).toLocaleString() + '원';
-                document.getElementById('totalDelivery').innerText = deliveryFee.toLocaleString() + '원';
+                document.getElementById('price').innerText = price1.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '원';
+                document.getElementById('totalAmount').innerText = totalAmount.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '원';
+                document.getElementById('totalDiscount').innerText = (discount * -1).toLocaleString(undefined, { maximumFractionDigits: 0 }) + '원';
+                document.getElementById('totalDelivery').innerText = deliveryFee.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '원';
+
+                // 상품이 없을 경우 주문 버튼 알림 처리
+                const orderButton = document.querySelector('.order-button');
+                orderButton.onclick = function(event) {
+                    if (totalItems === 0) {
+                        event.preventDefault();
+                        alert("상품이 없습니다.");
+                    } else {
+                        cartForm.submit(); // 상품이 있는 경우 폼 제출
+                    }
+                };
+            }
+
+
+            let Top = document.getElementById('top');
+
+            if (Top) {
+                Top.style.display = 'none'
+                window.addEventListener('scroll', function () {
+                    if (window.scrollY > 300) {
+                        Top.style.display = 'block';
+                        console.log(Top);
+                    } else {
+                        Top.style.display = 'none';
+                    }
+                });
+
+                Top.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                    console.log(Top);
+                });
+            } else {
+                console.log("#top 요소를 찾을 수 없습니다.");
             }
         });
     </script>
-
 
     <!-- 제목, 페이지 네비게이션 -->
     <nav>
@@ -133,7 +222,7 @@
         <table>
             <thead>
             <tr>
-                <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                <th><input type="checkbox" id="selectAll"></th>
                 <th>상품명</th>
                 <th>총수량</th>
                 <th>판매가</th>
@@ -144,7 +233,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:if="${cartProducts == null or cartProducts.isEmpty()}" class="empty">
+            <tr th:if="${#lists.isEmpty(cartProducts)}" class="empty">
                 <td colspan="8">장바구니에 상품이 없습니다.</td>
             </tr>
             <tr th:each="product : ${cartProducts}" class="cart-item-row">
@@ -201,9 +290,8 @@
                     <td id="totalAmount">0원</td>
                 </tr>
             </table>
-            <input type="submit" name="" class="order-button" value="주문하기">
+            <input type="submit" name="order" class="order-button" value="주문하기">
         </div>
-
 
     </form>
 </section>

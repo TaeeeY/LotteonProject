@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import kr.co.lotteon.dto.*;
 import kr.co.lotteon.entity.CsQna;
 import kr.co.lotteon.entity.Reply;
-import kr.co.lotteon.service.AdminCsService;
 import kr.co.lotteon.service.CsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +16,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -28,15 +28,13 @@ public class AdminCsController {
     @Autowired
     private CsService csService;
 
-    @Autowired
-    private AdminCsService adminCsService;
 
 
 
     /////////////////////////
     // 🎈공지사항 //////////////
     ////////////////////////
-    @GetMapping(value = {"/admin/cs/notice/list", "/admin/cs/notice/"})
+    @GetMapping("/admin/cs/notice/list")
     public String adminNoticeList(@RequestParam(name="pg", defaultValue = "1") String pg,
                                   @RequestParam(name="cate1", required = false) String cate1,
                                   Model model){
@@ -175,15 +173,65 @@ public class AdminCsController {
     // 🎈자주 묻는 질문 ////////
     ///////////////////////
     @GetMapping("/admin/cs/faq/list")
-    public String adminFaqList(Model model){
-        List<FaqDTO> faqDTOList = csService.selectFaqList();
-        List<Cate2DTO> cate2list = csService.adminSelectCate2();
-        model.addAttribute("faqDTOList", faqDTOList);
-        model.addAttribute("cate2List", cate2list);
-        log.info("faqDTOList : " + faqDTOList);
-        log.info("cate2List : " + cate2list);
+    public String adminFaqList(@RequestParam(name="pg", defaultValue = "1") String pg,
+                               @RequestParam(name="cate1", required = false) String cate1,
+                               Model model){
+
+        log.info("pg : " + pg);
+        log.info("cate1 : " + cate1);
+
+        // 현재 페이지 번호
+        int currentPage = csService.getCurrentPage(pg);
+        log.info("currentPage : " + currentPage);
+
+        // 시작 인덱스
+        int start = csService.getStartNum(currentPage);
+        log.info("start : " + start);
+
+        // 전체 게시물 갯수
+        int total;
+        List<FaqDTO> faqDTOS;
+
+
+        if(cate1 == null || cate1.isEmpty()){
+            log.info("notice1");
+            total = csService.selectFaqTotal();
+            faqDTOS = csService.selectFaqListAll(start);
+        }else {
+            log.info("faq2");
+            log.info("faq2 cate1 : " + cate1);
+            total = csService.selectFaqTotalCate(Integer.parseInt(cate1));
+
+            log.info("notice2 total : " + total);
+
+            faqDTOS = csService.selectFaqListCate(Integer.parseInt(cate1), start);
+        }
+
+        // 마지막 페이지 번호
+        int lastPageNum = csService.getLastPageNum(total);
+
+        // 페이지 그룹 (현재 번호, 마지막 번호)
+        int[] result = csService.getPageGroupNum(currentPage, lastPageNum);
+
+        // 페이지 시작 번호
+        int pageStartNum = csService.getPageStartNum(total, currentPage);
+
+        model.addAttribute("faqDTOS", faqDTOS);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("lastPageNum", lastPageNum);
+        model.addAttribute("pageGroupStart", result[0]);
+        model.addAttribute("pageGroupEnd", result[1]);
+        model.addAttribute("pageStartNum", pageStartNum+1);
+        model.addAttribute("cate1", cate1);
+        log.info("currentPage: " + currentPage);
+        log.info("lastPage: " + lastPageNum);
+        log.info("cate1last : " + cate1);
+
         return "/admin/cs/faq/list";
     }
+
+
+
     //🎈 자주묻는질문 view
     @GetMapping("/admin/cs/faq/view")
     public String adminFaqView(int faqno, Model model){
@@ -260,16 +308,62 @@ public class AdminCsController {
     }
 
 
-
-
-
     /////////////////////////
     // 🎈1:1 질문 /////////////
     ////////////////////////
     @GetMapping("/admin/cs/qna/list")
-    public String adminQnaList(Model model){
-        List<QnaDTO> qnaDTOS = csService.adminSelectQnaList();
+    public String adminQnaList(@RequestParam(name="pg", defaultValue = "1") String pg,
+                               @RequestParam(name="cate1", required = false) String cate1,
+                               Model model){
+        log.info("pg : " + pg);
+        log.info("cate1 : " + cate1);
+
+        // 현재 페이지 번호
+        int currentPage = csService.getCurrentPage(pg);
+        log.info("currentPage : " + currentPage);
+
+        // 시작 인덱스
+        int start = csService.getStartNum(currentPage);
+        log.info("start : " + start);
+
+        // 전체 게시물 갯수
+        int total;
+        List<QnaDTO> qnaDTOS;
+
+
+        if(cate1 == null || cate1.isEmpty()){
+            log.info("qna1");
+            total = csService.selectQnaTotal();
+            qnaDTOS = csService.selectQnaListAll(start);
+        }else {
+            log.info("qna2");
+            log.info("qna2 cate1 : " + cate1);
+            total = csService.selectQnaTotalCate(Integer.parseInt(cate1));
+
+            log.info("qna2 total : " + total);
+
+            qnaDTOS = csService.selectQnaListCate(Integer.parseInt(cate1), start);
+        }
+
+        // 마지막 페이지 번호
+        int lastPageNum = csService.getLastPageNum(total);
+
+        // 페이지 그룹 (현재 번호, 마지막 번호)
+        int[] result = csService.getPageGroupNum(currentPage, lastPageNum);
+
+        // 페이지 시작 번호
+        int pageStartNum = csService.getPageStartNum(total, currentPage);
+
         model.addAttribute("qnaDTOS", qnaDTOS);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("lastPageNum", lastPageNum);
+        model.addAttribute("pageGroupStart", result[0]);
+        model.addAttribute("pageGroupEnd", result[1]);
+        model.addAttribute("pageStartNum", pageStartNum+1);
+        model.addAttribute("cate1", cate1);
+        log.info("currentPage: " + currentPage);
+        log.info("lastPage: " + lastPageNum);
+        log.info("cate1last : " + cate1);
 
         return "/admin/cs/qna/list";
     }
@@ -347,10 +441,7 @@ public class AdminCsController {
     @ResponseBody
     @PostMapping("/admin/cs/qna/reply")
     public ResponseEntity<Reply> reply(@RequestBody ReplyDTO replyDTO){
-       // replyDTO.setWriter("hello");
-        replyDTO.setWriter(replyDTO.getWriter());
-        replyDTO.setReplyno(replyDTO.getReplyno());
-        log.info("replyDTO.. : " + replyDTO);
+
         return csService.insertReply(replyDTO);
     }
 
@@ -362,12 +453,8 @@ public class AdminCsController {
     }
 
     @PutMapping("/admin/cs/qna/reply")
-    public ResponseEntity<?> putReply(@RequestBody ReplyDTO replyDTO, HttpServletRequest req) {
+    public ResponseEntity<?> putReply(@RequestBody ReplyDTO replyDTO) {
         return csService.updateReply(replyDTO);
     }
-
-
-
-
 
 }

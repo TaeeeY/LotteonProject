@@ -16,18 +16,80 @@
     <link rel="stylesheet" th:href="@{/css/member.css}"/>
     <link rel="stylesheet" th:href="@{/css/product.css}"/>
     <link rel="stylesheet" th:href="@{/css/common.css}"/>
+    <script>
+        $(function(){
+            $('#bannerTop .btnClose').click(function(){
+                $(this).closest('#bannerTop').removeClass('on');
+            });
+        });
+
+    </script>
+    <style>
+        #bannerTop {
+            display: none;
+            width: 100%;
+            height: 80px;
+            border-bottom: 1px solid #e9e9e9;
+            box-sizing: border-box;
+        }
+
+        #bannerTop.on {
+            display: block;
+        }
+
+        #bannerTop > article {
+            position: relative;
+            width: 1200px;
+            height: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        #bannerTop > article > .btnClose {
+            position: absolute;
+            right: 0px;
+            top: 4px;
+            width: 25px;
+            height: 28px;
+            background-image: url(/images/ico_sprite.png);
+            background-position: -122px -142px;
+            background-color: #a595958c;
+            font-size: 20px;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+        }
+    </style>
 </head>
+<script>
+    function showAlertLogin() {
+        alert('로그인이 필요한 기능입니다.');
+        window.location.href = '/lotteon/member/login';
+    }
+
+</script>
 <body>
 <div class="wrapper">
     <header>
+        <!--🎈탑배너-->
+        <div id="bannerTop" class="on" style="background: #e4dfdf;" th:each="banner:${banners}" th:if="${banner.blocation.equals('MAIN1')} and ${banner.bmanage == 1}">
+            <article>
+                <a href="#"><img th:src="@{|/uploads/banner/${banner.bfile}|}"></a>
+                <button class="btnClose">X</button>
+            </article>
+        </div>
+
         <div class="top">
             <div>
                 <a sec:authorize="isAnonymous()" th:href="@{/member/login}">로그인</a>
                 <a sec:authorize="isAnonymous()" th:href="@{/member/join}">회원가입</a>
+                <a sec:authorize="isAnonymous()" th:href="@{/member/login}">마이페이지</a>
+                <a sec:authorize="isAnonymous()" th:href="@{/member/login}"><i class="fa fa-shopping-cart" aria-hidden="true"></i>&nbsp;장바구니</a>
 
                 <a sec:authorize="isAuthenticated()" th:href="@{/mypage/}">[[${#authentication.principal.user.name}]]</a>
                 <a sec:authorize="isAuthenticated()" th:href="@{/product/cart}"><i class="fa fa-shopping-cart" aria-hidden="true"></i>장바구니</a>
-                <a sec:authorize="isAuthenticated()" th:href="@{/admin/index}">관리자</a>
+                <a sec:authorize="isAuthenticated()" th:if="${#authentication.principal.user.role} == 'ADMIN'" th:href="@{/admin/index}">관리자</a>
+                <a sec:authorize="isAuthenticated()" th:if="${#authentication.principal.user.role} == 'SELLER'" th:href="@{/seller}">판매자</a>
                 <a sec:authorize="isAuthenticated()" th:href="@{/member/logout}">로그아웃</a>
             </div>
         </div>
@@ -36,7 +98,7 @@
                 <a th:href="@{/}"><img th:src="@{/images/header_logo.png}" alt="로고" /></a>
                 <form th:action="@{/product/search}" method="get">
                     <!-- 검색 입력 필드의 placeholder를 추가하여 사용자가 이해하기 쉽게 안내합니다. -->
-                    <input type="text" name="search" placeholder="카테고리 이름 검색"/>
+                    <input type="text" name="search"/>
                     <button type="submit"><i class="fa fa-search"></i></button>
                 </form>
             </div>
@@ -44,24 +106,17 @@
         <div class="menu">
             <div>
                 <ul>
-                    <li><a th:href="@{#}">히트상품</a></li>
-                    <li><a th:href="@{#}">추천상품</a></li>
-                    <li><a th:href="@{#}">최신상품</a></li>
-                    <li><a th:href="@{#}">인기상품</a></li>
-                    <li><a th:href="@{#}">할인상품</a></li>
-                </ul>
-                <ul>
-                    <li><a th:href="@{/mypage/coupon}">쿠폰존</a></li>
-                    <li><a th:href="@{#}">사용후기</a></li>
-                    <li><a th:href="@{#}">개인결제</a></li>
+                    <li><a th:href="@{/cs/notice/list}">공지사항</a></li>
+                    <li><a th:href="@{/cs/faq/list(cate1=20)}">자주묻는질문</a></li>
+                    <li><a th:href="@{/cs/qna/list}" th:if="${#authorization.expression('isAuthenticated()')}">문의하기</a></li>
+                    <li><a th:unless="${#authorization.expression('isAuthenticated()')}" onclick="showAlertLogin();" style="cursor: pointer;">문의하기</a></li>
                     <li><a th:href="@{/cs}">고객센터</a></li>
-                    <li><a th:href="@{/cs/faq/list(cate1=20)}">FAQ</a></li>
                 </ul>
             </div>
         </div>
     </header>
     <main class="content" id="product" >
-        <aside>
+        <aside th:if="${not #strings.equals(pageId, 'writeReview')}">
             <!-- 카테고리 -->
             <ul class="category">
                 <li><i class="fa fa-bars" aria-hidden="true"></i>카테고리</li>
@@ -93,100 +148,36 @@
             </ul>
 
             <!-- 베스트상품 배너 -->
-            <article class="best">
+
+            <article class="best" th:if="${bestProduct != null}">
                 <h1><i class="fas fa-crown"></i>베스트상품</h1>
                 <ol>
-                    <li>
-                        <a href="#">
+                    <li th:each="product,productState:${bestProduct}">
+                        <a th:href="@{/product/view(pno=${product.pno})}">
                             <div class="thumb">
-                                <i>1</i>
-                                <img src="https://via.placeholder.com/230" alt="item1" />
+                                <i>[[${productState.index} + 1]]</i>
+                                <img th:src="@{|/product/${product.cate}/${product.mainimg}|}" alt="상품이미지">
                             </div>
-                            <h2>상품명</h2>
-                            <div class="org_price">
-                                <del>30,000</del>
-                                <span>10%</span>
+                            <h2>[[${product.pname}]]</h2>
+                            <div class="org_price" th:if="${product.discount} != 0">
+                                <del>[[${#numbers.formatInteger(product.price, 0, 'COMMA')}]]</del>
+                                <span>[[${#numbers.formatInteger(product.discount, 0, 'COMMA')}]]%</span>
                             </div>
-                            <div class="dis_price">
-                                <ins>27,000</ins>
+                            <div class="dis_price" th:if="${product.discount} != 0">
+                                <ins>[[${#numbers.formatInteger(product.price * (1 - product.discount / 100.0), 0, 'COMMA')}]]</ins>
+                                <span th:if="${product.deliprice == 0}" class="free">무료배송</span>
                             </div>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <div class="thumb">
-                                <i>2</i>
-                                <img src="https://via.placeholder.com/50" alt="item1" />
+                            <div class="dis_price" th:if="${product.discount} == 0">
+                                <ins>[[${#numbers.formatInteger(product.price * (1 - product.discount / 100.0), 0, 'COMMA')}]]</ins>
+                                <span th:if="${product.deliprice == 0}" class="free">무료배송</span>
                             </div>
-                            <article>
-                                <h2>상품명</h2>
-                                <div class="org_price">
-                                    <del>30,000</del>
-                                    <span>10%</span>
-                                </div>
-                                <div class="dis_price">
-                                    <ins>27,000</ins>
-                                </div>
-                            </article>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <div class="thumb">
-                                <i>3</i>
-                                <img src="https://via.placeholder.com/50" alt="item1" />
-                            </div>
-                            <article>
-                                <h2>상품명</h2>
-                                <div class="org_price">
-                                    <del>30,000</del>
-                                    <span>10%</span>
-                                </div>
-                                <div class="dis_price">
-                                    <ins>27,000</ins>
-                                </div>
-                            </article>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <div class="thumb">
-                                <i>4</i>
-                                <img src="https://via.placeholder.com/50" alt="item1" />
-                            </div>
-                            <article>
-                                <h2>상품명</h2>
-                                <div class="org_price">
-                                    <del>30,000</del>
-                                    <span>10%</span>
-                                </div>
-                                <div class="dis_price">
-                                    <ins>27,000</ins>
-                                </div>
-                            </article>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <div class="thumb">
-                                <i>5</i>
-                                <img src="https://via.placeholder.com/50" alt="item1" />
-                            </div>
-                            <article>
-                                <h2>상품명</h2>
-                                <div class="org_price">
-                                    <del>30,000</del>
-                                    <span>10%</span>
-                                </div>
-                                <div class="dis_price">
-                                    <ins>27,000</ins>
-                                </div>
-                            </article>
                         </a>
                     </li>
                 </ol>
             </article>
+
         </aside>
+
 
     <section layout:fragment="content">
     <!--내용시작-->
@@ -196,10 +187,10 @@
     </main>
 <footer>
     <ul>
-        <li><a th:href="@{#}">회사소개</a></li>
-        <li><a th:href="@{#}">서비스이용약관</a></li>
-        <li><a th:href="@{#}">개인정보처리방침</a></li>
-        <li><a th:href="@{#}">전자금융거래약관</a></li>
+        <li><a th:href="@{/company}">회사소개</a></li>
+        <li><a th:href="@{/policy/buyer}">서비스이용약관</a></li>
+        <li><a th:href="@{/policy/privacy}">개인정보처리방침</a></li>
+        <li><a th:href="@{/policy/finance}">전자금융거래약관</a></li>
     </ul>
     <div>
         <p><img th:src="@{/images/footer_logo.png}" alt="로고" /></p>
@@ -219,7 +210,7 @@
         </p>
     </div>
 </footer>
-<button type="button" id="top">상단이동</button>
+<button type="button" id="top">TOP</button>
 </div>
 </body>
 </html>
